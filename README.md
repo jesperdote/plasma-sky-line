@@ -68,6 +68,17 @@ kpackagetool6 -t Plasma/Applet -i plasma-sky-line/package
 
 Then right-click the panel → **Add Widgets…** and search for it. Needs Plasma 6.
 
+What changed in each version: [CHANGELOG.md](CHANGELOG.md).
+
+## Releasing
+
+1. Set `"Version"` in `package/metadata.json` (e.g. `1.3.0`).
+2. Add a `## [1.3.0] - YYYY-MM-DD` section to `CHANGELOG.md` (Added / Changed / Fixed).
+3. Commit, then `git tag v1.3.0 && git push && git push --tags`.
+
+The release workflow checks that the tag matches `metadata.json`, builds the `.plasmoid` and
+publishes a GitHub release with that changelog section as its notes.
+
 ## License
 
 [GPL-3.0-or-later](LICENSE).
