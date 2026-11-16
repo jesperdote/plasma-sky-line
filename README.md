@@ -10,6 +10,7 @@ Click it for the forecast.
 
 [![Latest release](https://img.shields.io/github/v/release/jesperdote/plasma-sky-line?label=release&color=8AADF4)](https://github.com/jesperdote/plasma-sky-line/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/jesperdote/plasma-sky-line/total?color=A6DA95)](https://github.com/jesperdote/plasma-sky-line/releases)
+[![KDE Store](https://img.shields.io/badge/KDE%20Store-Sky%20Line-1D99F3?logo=kde&logoColor=white)](https://store.kde.org/p/2381979)
 [![Plasma 6](https://img.shields.io/badge/KDE%20Plasma-6-1D99F3?logo=kde&logoColor=white)](https://kde.org/plasma-desktop/)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-F5A97F)](LICENSE)
 [![Weather: Open-Meteo](https://img.shields.io/badge/weather-Open--Meteo-EED49F)](https://open-meteo.com/)
@@ -113,7 +114,8 @@ Plus:
 ### From the KDE Store
 
 Right-click the panel → **Add Widgets…** → **Get New Widgets…** → **Download New Plasma Widgets**,
-search for **Sky Line** and click **Install**.
+search for **Sky Line** and click **Install**. Or get it from its
+[store page](https://store.kde.org/p/2381979).
 
 ### From a release
 
@@ -248,7 +250,8 @@ To release a new version:
 
 The [release workflow](.github/workflows/release.yml) checks that the tag matches
 `metadata.json`, builds the `.plasmoid` and publishes a GitHub release with that changelog
-section as its notes.
+section as its notes. Then upload the same `.plasmoid` to the
+[KDE Store page](https://store.kde.org/p/2381979) (Files tab, with the new version number).
 
 Bug reports and ideas are welcome in [Issues](https://github.com/jesperdote/plasma-sky-line/issues).
 
