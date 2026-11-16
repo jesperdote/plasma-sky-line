@@ -3,6 +3,15 @@
 All notable changes to Sky Line. Versions follow [semantic versioning](https://semver.org/);
 each one is a GitHub release with the installable `.plasmoid` file.
 
+## [1.2.1] - 2026-11-17
+
+### Added
+- "Report a bug" on the widget's About page, linking to the GitHub issues.
+
+### Fixed
+- The widget's description in Add Widgets still said to hover for the weather card; it now says
+  to click for the forecast.
+
 ## [1.2.0] - 2026-11-16
 
 ### Added
@@ -50,5 +59,6 @@ each one is a GitHub release with the installable `.plasmoid` file.
 - Settings for the clock (24 or 12 hours), °C or °F, hour labels, sunrise/sunset times, fading
   the past hours, and the sizes of the icon, labels, time and line.
 
+[1.2.1]: https://github.com/jesperdote/plasma-sky-line/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/jesperdote/plasma-sky-line/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/jesperdote/plasma-sky-line/releases/tag/v1.1.1

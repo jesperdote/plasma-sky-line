@@ -251,7 +251,8 @@ To release a new version:
 The [release workflow](.github/workflows/release.yml) checks that the tag matches
 `metadata.json`, builds the `.plasmoid` and publishes a GitHub release with that changelog
 section as its notes. Then upload the same `.plasmoid` to the
-[KDE Store page](https://store.kde.org/p/2381979) (Files tab, with the new version number).
+[KDE Store page](https://store.kde.org/p/2381979) (Files tab, with the new version number). If the repository has an `NTFY_TOKEN` secret, the
+workflow also sends an [ntfy](https://ntfy.sh) push as a reminder, with the file and store links.
 
 Bug reports and ideas are welcome in [Issues](https://github.com/jesperdote/plasma-sky-line/issues).
 

@@ -10,6 +10,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}   # optional: release reminder by ntfy
     steps:
       - uses: actions/checkout@v4
       - name: Check the tag matches metadata.json
@@ -38,3 +40,19 @@ jobs:
         run: |
           id=$(jq -r .KPlugin.Name package/metadata.json)
           gh release create "$GITHUB_REF_NAME" "$ASSET" --title "$id ${GITHUB_REF_NAME#v}" --notes-file notes.md
+      - name: Remind the owner to upload it to the KDE Store
+        # The store has no upload API, so the new .plasmoid goes up by hand. Skipped in forks
+        # and wherever the NTFY_TOKEN secret isn't set.
+        if: env.NTFY_TOKEN != ''
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          release="https://github.com/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME"
+          file="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/$ASSET"
+          curl -sS --fail-with-body -m 20 \
+            -H "Authorization: Bearer $NTFY_TOKEN" \
+            -H "Title: Sky Line $version released" \
+            -H "Tags: package" \
+            -H "Click: $release" \
+            -H "Actions: view, Download .plasmoid, $file; view, KDE Store page, https://store.kde.org/p/2381979" \
+            -d "Upload $ASSET to the KDE Store: Edit, Files, set version $version and archive the old file." \
+            https://ntfy.opentokwa.org/releases
