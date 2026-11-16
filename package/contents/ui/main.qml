@@ -1,11 +1,11 @@
 // Sky Line: the 24 hours of today spread across the panel, coloured like the sky,
 // with sunrise and sunset marked. Above the current time sits an emoji for the
 // weather right now (sun, clouds, rain, storm...), or tonight's moon on clear nights.
+// Clicking it opens a weather summary, or the full weather card (a setting).
 import QtQuick
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasmoid
-import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasma5support as P5Support
 import "sky.js" as Sky
 
@@ -13,15 +13,17 @@ PlasmoidItem {
     id: root
 
     preferredRepresentation: compactRepresentation
+    // Build the full card up front, so the first click opens it without a delay.
+    preloadFullRepresentation: true
     Layout.fillWidth: true
 
     // Location: from the command if one is set, else the fixed one.
     property real cmdLat: NaN
     property real cmdLon: NaN
-    readonly property bool useCmd: Plasmoid.configuration.locationCommand !== "" && !isNaN(cmdLat)
+    readonly property bool useCmd: Plasmoid.configuration.locationCommand !== "" && !isNaN(cmdLat) && !isNaN(cmdLon)
     readonly property real lat: useCmd ? cmdLat : Plasmoid.configuration.latitude
     readonly property real lon: useCmd ? cmdLon : Plasmoid.configuration.longitude
-    readonly property bool hasLocation: lat !== 0 || lon !== 0
+    readonly property bool hasLocation: !isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)
 
     property date now: new Date()
     property var sun: hasLocation ? Sky.sunTimes(now, lat, lon) : null
@@ -32,43 +34,95 @@ PlasmoidItem {
     readonly property real nowH: Sky.hours(now)
     readonly property bool isDay: nowH >= riseH && nowH < setH
 
-    // Current weather from Open-Meteo (free, no key), every 15 minutes.
+    // Weather from Open-Meteo (free, no key), every 15 minutes: current conditions, the next
+    // 24 hours and 7 days for the weather card, plus air quality from its sister API.
     property int weatherCode: -1
     property real temperature: NaN
     readonly property var weather: Sky.weather(weatherCode, isDay, moon.emoji)
+    readonly property bool imperial: Plasmoid.configuration.fahrenheit
+    property var wx: null          // forecast reply (current, hourly, daily)
+    property var aq: null          // air-quality reply (current)
+    property date updated
+    property string place: ""      // from the location command ("lat,lon|Place") or a reverse lookup
+    property string cmdPlace: ""
+
+    function getJson(url, done) {
+        const xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.DONE)
+                return
+            if (xhr.status !== 200) {
+                console.warn("Sky Line:", url.split("?")[0], "answered", xhr.status)
+                return
+            }
+            try {
+                done(JSON.parse(xhr.responseText))
+            } catch (e) {
+                console.warn("Sky Line: bad reply from", url.split("?")[0], e)
+            }
+        }
+        xhr.open("GET", url)
+        xhr.send()
+    }
 
     function fetchWeather() {
         if (!hasLocation)
             return
-        const xhr = new XMLHttpRequest()
-        xhr.onreadystatechange = () => {
-            if (xhr.readyState !== XMLHttpRequest.DONE || xhr.status !== 200)
-                return
-            try {
-                const c = JSON.parse(xhr.responseText).current
-                root.weatherCode = c.weather_code
-                root.temperature = c.temperature_2m
-            } catch (e) {
-                console.warn("Sky Line: bad weather reply", e)
-            }
-        }
-        xhr.open("GET", "https://api.open-meteo.com/v1/forecast?latitude=" + lat.toFixed(4)
-                 + "&longitude=" + lon.toFixed(4) + "&current=temperature_2m,weather_code&timezone=auto"
-                 + (Plasmoid.configuration.fahrenheit ? "&temperature_unit=fahrenheit" : ""))
-        xhr.send()
+        const at = "latitude=" + lat.toFixed(4) + "&longitude=" + lon.toFixed(4) + "&timezone=auto"
+        getJson("https://api.open-meteo.com/v1/forecast?" + at
+                + "&current=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,is_day,weather_code,"
+                + "cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,uv_index,visibility"
+                + "&hourly=temperature_2m,weather_code,precipitation_probability,is_day&forecast_hours=24"
+                + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,"
+                + "precipitation_sum,uv_index_max,wind_speed_10m_max&forecast_days=7"
+                + (imperial ? "&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch" : ""),
+                d => {
+                    root.wx = d
+                    root.weatherCode = d.current.weather_code
+                    root.temperature = d.current.temperature_2m
+                    root.updated = new Date()
+                })
+        getJson("https://air-quality-api.open-meteo.com/v1/air-quality?" + at + "&current=us_aqi,pm2_5,pm10",
+                d => root.aq = d)
     }
-    onLatChanged: fetchWeather()
-    onLonChanged: fetchWeather()
+
+    // Place name: the location command's label if it gives one, else a reverse lookup
+    // (BigDataCloud's free client endpoint, no key) when the spot moves by more than ~1 km.
+    property string placeKey: ""
+    function fetchPlace() {
+        if (cmdPlace !== "") {
+            place = cmdPlace
+            return
+        }
+        if (!hasLocation)
+            return
+        const key = lat.toFixed(2) + "," + lon.toFixed(2)
+        if (key === placeKey)
+            return
+        placeKey = key
+        getJson("https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=" + lat.toFixed(4)
+                + "&longitude=" + lon.toFixed(4) + "&localityLanguage=en",
+                d => {
+                    const town = d.city || d.locality || ""
+                    root.place = [town, d.principalSubdivision, d.countryCode]
+                        .filter((p, i, a) => p && a.indexOf(p) === i).join(", ")
+                })
+    }
+    onLatChanged: { fetchWeather(); fetchPlace() }
+    onLonChanged: { fetchWeather(); fetchPlace() }
+    onCmdPlaceChanged: fetchPlace()
 
     P5Support.DataSource {
         id: runner
         engine: "executable"
         connectedSources: []
         onNewData: (source, data) => {
-            const m = String(data["stdout"] || "").trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/)
+            // "lat,lon", optionally followed by "|Place name".
+            const m = String(data["stdout"] || "").trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)(?:\s*\|\s*(.+))?/)
             if (m) {
-                root.cmdLat = parseFloat(m[1])
                 root.cmdLon = parseFloat(m[2])
+                root.cmdLat = parseFloat(m[1])
+                root.cmdPlace = (m[3] || "").trim()
             }
             disconnectSource(source)
         }
@@ -83,7 +137,7 @@ PlasmoidItem {
         function onLocationCommandChanged() { root.refreshLocation() }
         function onFahrenheitChanged() { root.fetchWeather() }
     }
-    Component.onCompleted: { refreshLocation(); fetchWeather() }
+    Component.onCompleted: { refreshLocation(); fetchWeather(); fetchPlace() }
 
     Timer {
         interval: 30000
@@ -105,22 +159,36 @@ PlasmoidItem {
         onTriggered: root.refreshLocation()
     }
 
-    toolTipMainText: (weather.text || (isDay ? "Day" : "Night"))
-                     + (isNaN(temperature) ? "" : ", " + Math.round(temperature) + "°")
+    // No hover tooltip: everything is in the popup that a click opens.
+    toolTipMainText: ""
+    toolTipSubText: ""
     readonly property bool use24: Plasmoid.configuration.use24h
-    toolTipSubText: {
-        if (!root.hasLocation)
-            return "Set a location in the widget settings"
-        let s = ""
-        if (root.sun) {
-            const len = root.setH - root.riseH
-            s += "Sunrise " + Sky.clock(root.sun.rise, root.use24) + " · Sunset " + Sky.clock(root.sun.set, root.use24)
-            s += "\nDaylight " + Math.floor(len) + " h " + Math.round((len % 1) * 60) + " min"
-        } else {
-            s += "No sunrise or sunset today"
+
+    // The popup: summary by default, the full card with the "full details" setting. "Show all
+    // details" in the summary expands it until the popup closes.
+    property bool showAll: false
+    onExpandedChanged: if (!expanded) showAll = false
+    fullRepresentation: Rectangle {
+        readonly property real pad: Kirigami.Units.largeSpacing * 1.5
+        implicitWidth: inner.implicitWidth + 2 * pad
+        implicitHeight: inner.implicitHeight + 2 * pad
+        Layout.preferredWidth: implicitWidth
+        Layout.preferredHeight: implicitHeight
+        Layout.minimumWidth: implicitWidth
+        Layout.minimumHeight: implicitHeight
+        Layout.maximumWidth: implicitWidth
+        Layout.maximumHeight: implicitHeight
+        // Solid, theme-coloured (Plasma's popups are see-through).
+        radius: Kirigami.Units.cornerRadius * 2
+        color: Qt.alpha(Kirigami.Theme.backgroundColor, 1)
+        WeatherCard {
+            id: inner
+            sky: root
+            compact: !Plasmoid.configuration.fullDetails && !root.showAll
+            onShowMore: root.showAll = true
+            x: parent.pad
+            y: parent.pad
         }
-        s += "\n" + root.moon.emoji + " " + root.moon.name + ", " + Math.round(root.moon.illumination * 100) + "% lit"
-        return s
     }
 
     compactRepresentation: Item {
@@ -259,12 +327,10 @@ PlasmoidItem {
             x: view.nowX - width / 2
             y: view.lineY - view.lw / 2 - height + Math.round(height * 0.12)
         }
-        // Hovering the weather icon: day, time and date on one line (optional), instead of the weather tooltip.
-        PlasmaCore.ToolTipArea {
-            anchors.fill: icon
-            visible: icon.visible && view.cfg.showDateTooltip
-            mainText: Qt.formatDateTime(root.now, "ddd | HH:mm | MM:dd:yy")
-            onContainsMouseChanged: if (containsMouse) root.now = new Date()
+        // A click anywhere on the line opens the weather popup (and closes it again).
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.expanded = !root.expanded
         }
         Text {
             readonly property var parts: [view.cfg.showTime ? Sky.clock(root.now, root.use24) : "",
@@ -287,5 +353,5 @@ PlasmoidItem {
             color: "#A5ADCB"
         }
     }
-    fullRepresentation: compactRepresentation
+
 }

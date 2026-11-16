@@ -25,8 +25,8 @@
         <entry name="use24h" type="Bool"><default>true</default></entry>
         <entry name="fahrenheit" type="Bool"><default>false</default></entry>
         <entry name="showSunTimes" type="Bool"><default>true</default></entry>
-        <!-- Hovering the weather icon shows "Sat | 05:58 | 11:14:26" instead of the weather tooltip. -->
-        <entry name="showDateTooltip" type="Bool"><default>true</default></entry>
+        <!-- Clicking the widget opens a weather summary; with this on, the full card (hourly, 7 days, all details). -->
+        <entry name="fullDetails" type="Bool"><default>false</default></entry>
         <!-- Hour labels every N hours (1, 2, 3 or 6); the ticks stay hourly. -->
         <entry name="labelEvery" type="Int"><default>1</default></entry>
         <!-- Fade the part of the day that is already past. -->

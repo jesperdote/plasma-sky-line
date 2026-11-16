@@ -8,12 +8,12 @@
             }
         ],
         "Category": "Date and Time",
-        "Description": "Today's 24 hours spread across the panel in sky colours, sunrise and sunset marked, with the current weather (or tonight's moon) sitting above the current time",
+        "Description": "Today's 24 hours spread across the panel in sky colours, sunrise and sunset marked, with the current weather (or tonight's moon) sitting above the current time; hover it for a full weather card",
         "Icon": "weather-clear",
         "Id": "com.github.jesperdote.skyline",
         "License": "GPL-3.0-or-later",
         "Name": "Sky Line",
-        "Version": "1.1.1",
+        "Version": "1.2.0",
         "Website": "https://github.com/jesperdote/plasma-sky-line"
     },
     "X-Plasma-API-Minimum-Version": "6.0"

@@ -104,3 +104,63 @@ function hourLabel(h, use24) {
     var h12 = h % 12 === 0 ? 12 : h % 12
     return h12 + (h % 24 < 12 ? "a" : "p")
 }
+
+// ---- Weather card helpers ----
+
+// Open-Meteo's local times ("2026-11-16T14:00", no offset) as a Date in the laptop's zone.
+function localTime(s) { return new Date(s) }
+
+// The weather icon for an hour or a day; clear nights get a plain moon (the phase is in the header).
+function hourIcon(code, isDay) { return weather(code, isDay, "🌙").icon }
+
+// UV index -> level name and colour (WHO scale).
+function uvLevel(uv) {
+    if (uv < 3) return { text: "Low", color: "#A6DA95" }
+    if (uv < 6) return { text: "Moderate", color: "#EED49F" }
+    if (uv < 8) return { text: "High", color: "#F5A97F" }
+    if (uv < 11) return { text: "Very high", color: "#ED8796" }
+    return { text: "Extreme", color: "#C6A0F6" }
+}
+
+// US AQI -> level name and colour.
+function aqiLevel(aqi) {
+    if (aqi <= 50) return { text: "Good", color: "#A6DA95" }
+    if (aqi <= 100) return { text: "Moderate", color: "#EED49F" }
+    if (aqi <= 150) return { text: "Unhealthy for some", color: "#F5A97F" }
+    if (aqi <= 200) return { text: "Unhealthy", color: "#ED8796" }
+    if (aqi <= 300) return { text: "Very unhealthy", color: "#C6A0F6" }
+    return { text: "Hazardous", color: "#B7375F" }
+}
+
+// Wind direction in degrees (where it blows FROM) -> compass point and an arrow showing where it blows TO.
+var compass = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+var arrows = ["↓", "↙", "←", "↖", "↑", "↗", "→", "↘"]
+function windDir(deg) {
+    return { name: compass[Math.round(deg / 22.5) % 16], arrow: arrows[Math.round(deg / 45) % 8] }
+}
+
+// Beaufort-style words for a wind speed in km/h.
+function windWords(kmh) {
+    if (kmh < 2) return "Calm"
+    if (kmh < 12) return "Light breeze"
+    if (kmh < 29) return "Breeze"
+    if (kmh < 50) return "Strong breeze"
+    if (kmh < 75) return "Gale"
+    return "Storm"
+}
+
+// Short rain outlook from the next hours' chances: "☔ 65% at 11 AM", "🌦 48% by 3 PM" or "No rain expected".
+function rainOutlook(times, probs, use24, hoursAhead) {
+    var n = Math.min(hoursAhead, probs.length)
+    var peak = 0, peakAt = 0, first = -1
+    for (var i = 0; i < n; i++) {
+        var p = probs[i] || 0
+        if (p > peak) { peak = p; peakAt = i }
+        if (first < 0 && p >= 50) first = i
+    }
+    var at = function (i) { return clock(localTime(times[i]), use24) }
+    if (first === 0) return { icon: "☔", text: (probs[0] || 0) + "% chance of rain now" }
+    if (first > 0) return { icon: "☔", text: probs[first] + "% chance of rain at " + at(first) }
+    if (peak >= 25) return { icon: "🌦️", text: "Up to " + peak + "% chance of rain by " + at(peakAt) }
+    return { icon: "🌂", text: "No rain expected in the next " + n + " h" }
+}

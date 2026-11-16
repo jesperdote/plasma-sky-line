@@ -9,7 +9,7 @@ KCM.SimpleKCM {
     property alias cfg_use24h: clock24.checked
     property alias cfg_fahrenheit: fahrenheit.checked
     property alias cfg_showSunTimes: showSunTimes.checked
-    property alias cfg_showDateTooltip: showDateTooltip.checked
+    property alias cfg_fullDetails: fullDetails.checked
     property int cfg_labelEvery
     property alias cfg_dimPast: dimPast.checked
     property alias cfg_iconSize: iconSize.value
@@ -22,7 +22,7 @@ KCM.SimpleKCM {
     property bool cfg_use24hDefault
     property bool cfg_fahrenheitDefault
     property bool cfg_showSunTimesDefault
-    property bool cfg_showDateTooltipDefault
+    property bool cfg_fullDetailsDefault
     property int cfg_labelEveryDefault
     property bool cfg_dimPastDefault
     property int cfg_iconSizeDefault
@@ -49,8 +49,8 @@ KCM.SimpleKCM {
             opacity: 0.7
         }
         QQC2.CheckBox {
-            id: showDateTooltip
-            text: "Day, time and date when hovering the icon"
+            id: fullDetails
+            text: "Clicking shows full weather details (otherwise a summary)"
         }
 
         Item { Kirigami.FormData.isSection: true }
